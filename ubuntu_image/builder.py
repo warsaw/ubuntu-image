@@ -8,7 +8,7 @@ import logging
 from contextlib import ExitStack, contextmanager
 from operator import attrgetter
 from tempfile import TemporaryDirectory
-from ubuntu_image.helpers import GiB, MiB, run
+from ubuntu_image.helpers import GiB, MiB, run, weld
 from ubuntu_image.image import Image
 from ubuntu_image.parser import parse as parse_yaml
 from ubuntu_image.state import State
@@ -310,19 +310,9 @@ class ModelAssertionBuilder(BaseImageBuilder):
         super().make_temporary_directories()
 
     def populate_rootfs_contents(self):
-        # Run `snap weld` on the model.assertion.  sudo is currently required
-        # in all cases, but eventually, it won't be necessary at least for
-        # UEFI support.
-        raw_cmd = 'sudo snap weld {} --root-dir={} --gadget-unpack-dir={} {}'
-        channel = ('' if self.args.channel is None
-                   else '--channel={}'.format(self.args.channel))
-        # 'snap weld' doesn't currently create a full filesystem tree for us,
-        # only the pieces relative to the /system-data/ directory; so create
-        # this subdir.
-        snap_root = os.path.join(self.rootfs, 'system-data')
-        cmd = raw_cmd.format(channel, snap_root, self.unpackdir,
-                             self.args.model_assertion)
-        run(cmd)
+        weld(self.args.model_assertion,
+             self.rootfs, self.unpackdir,
+             self.args.channel)
         # XXX For testing purposes, these files can't be owned by root.  Blech
         # blech blech.
         run('sudo chown -R {} {}'.format(os.getuid(), self.rootfs))

@@ -1,5 +1,6 @@
 """Useful helper functions."""
 
+import os
 import re
 import sys
 
@@ -12,6 +13,7 @@ __all__ = [
     'as_size',
     'run',
     'transform',
+    'weld',
     ]
 
 
@@ -76,3 +78,15 @@ def run(command, *, check=True, **args):
         sys.stderr.write(proc.stderr)
         proc.check_returncode()
     return proc
+
+
+def weld(model_assertion, rootdir, unpackdir, channel=None):
+    raw_cmd = 'sudo snap weld {} --root-dir={} --gadget-unpack-dir={} {}'
+    channel = ('' if channel is None
+               else '--channel={}'.format(channel))
+    # 'snap weld' doesn't currently create a full filesystem tree for us,
+    # only the pieces relative to the /system-data/ directory; so create
+    # this subdir.
+    snap_root = os.path.join(rootdir, 'system-data')
+    cmd = raw_cmd.format(channel, snap_root, unpackdir, model_assertion)
+    run(cmd)
